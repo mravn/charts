@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/animation.dart';
 import 'package:flutter/material.dart';
@@ -17,9 +16,7 @@ class ChartPageState extends State<ChartPage> with TickerProviderStateMixin {
   final random = Random();
   int dataSet = 50;
   AnimationController animation;
-  double startHeight;   // Strike one.
-  double currentHeight; // Strike two.
-  double endHeight;     // Strike three. Refactor.
+  Tween<double> tween;
 
   @override
   void initState() {
@@ -27,18 +24,8 @@ class ChartPageState extends State<ChartPage> with TickerProviderStateMixin {
     animation = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
-    )..addListener(() {
-        setState(() {
-          currentHeight = lerpDouble( // Strike one.
-            startHeight,
-            endHeight,
-            animation.value,
-          );
-        });
-      });
-    startHeight = 0.0;                // Strike two.
-    currentHeight = 0.0;
-    endHeight = dataSet.toDouble();
+    );
+    tween = Tween<double>(begin: 0.0, end: dataSet.toDouble());
     animation.forward();
   }
 
@@ -50,9 +37,11 @@ class ChartPageState extends State<ChartPage> with TickerProviderStateMixin {
 
   void changeData() {
     setState(() {
-      startHeight = currentHeight;    // Strike three. Refactor.
       dataSet = random.nextInt(100);
-      endHeight = dataSet.toDouble();
+      tween = Tween<double>(
+        begin: tween.evaluate(animation),
+        end: dataSet.toDouble(),
+      );
       animation.forward(from: 0.0);
     });
   }
@@ -63,7 +52,7 @@ class ChartPageState extends State<ChartPage> with TickerProviderStateMixin {
       body: Center(
         child: CustomPaint(
           size: Size(200.0, 100.0),
-          painter: BarChartPainter(currentHeight),
+          painter: BarChartPainter(tween.animate(animation)),
         ),
       ),
       floatingActionButton: FloatingActionButton(
@@ -77,12 +66,15 @@ class ChartPageState extends State<ChartPage> with TickerProviderStateMixin {
 class BarChartPainter extends CustomPainter {
   static const barWidth = 10.0;
 
-  BarChartPainter(this.barHeight);
+  BarChartPainter(Animation<double> animation)
+      : animation = animation,
+        super(repaint: animation);
 
-  final double barHeight;
+  final Animation<double> animation;
 
   @override
   void paint(Canvas canvas, Size size) {
+    final barHeight = animation.value;
     final paint = Paint()
       ..color = Colors.blue[400]
       ..style = PaintingStyle.fill;
@@ -98,5 +90,5 @@ class BarChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(BarChartPainter old) => barHeight != old.barHeight;
+  bool shouldRepaint(BarChartPainter old) => false;
 }

@@ -5,6 +5,7 @@ import 'package:flutter/animation.dart';
 import 'package:flutter/material.dart';
 
 import 'color_palette.dart';
+import 'tween.dart';
 
 class BarChart {
   BarChart(this.bars);
@@ -48,38 +49,17 @@ class BarChart {
 }
 
 class BarChartTween extends Tween<BarChart> {
-  BarChartTween(BarChart begin, BarChart end) : super(begin: begin, end: end) {
-    final bMax = begin.bars.length;
-    final eMax = end.bars.length;
-    var b = 0;
-    var e = 0;
-    while (b + e < bMax + eMax) {
-      if (b < bMax && (e == eMax || begin.bars[b] < end.bars[e])) {
-        _tweens.add(BarTween(begin.bars[b], begin.bars[b].collapsed));
-        b++;
-      } else if (e < eMax && (b == bMax || end.bars[e] < begin.bars[b])) {
-        _tweens.add(BarTween(end.bars[e].collapsed, end.bars[e]));
-        e++;
-      } else {
-        _tweens.add(BarTween(begin.bars[b], end.bars[e]));
-        b++;
-        e++;
-      }
-    }
-  }
+  final MergeTween<Bar> _barsTween;
 
-  final _tweens = <BarTween>[];
+  BarChartTween(BarChart begin, BarChart end)
+      : _barsTween = MergeTween<Bar>(begin.bars, end.bars),
+        super(begin: begin, end: end);
 
   @override
-  BarChart lerp(double t) => BarChart(
-        List.generate(
-          _tweens.length,
-          (i) => _tweens[i].lerp(t),
-        ),
-      );
+  BarChart lerp(double t) => BarChart(_barsTween.lerp(t));
 }
 
-class Bar {
+class Bar implements MergeTweenable<Bar> {
   Bar(this.rank, this.x, this.width, this.height, this.color);
 
   final int rank;
@@ -88,9 +68,14 @@ class Bar {
   final double height;
   final Color color;
 
-  Bar get collapsed => Bar(rank, x, 0.0, 0.0, color);
+  @override
+  Bar get empty => Bar(rank, x, 0.0, 0.0, color);
 
+  @override
   bool operator <(Bar other) => rank < other.rank;
+
+  @override
+  Tween<Bar> tweenTo(Bar other) => BarTween(this, other);
 
   static Bar lerp(Bar begin, Bar end, double t) {
     assert(begin.rank == end.rank);

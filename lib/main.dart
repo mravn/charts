@@ -26,7 +26,7 @@ class ChartPageState extends State<ChartPage> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    tween = BarTween(Bar(0.0), Bar(50.0));
+    tween = BarTween(Bar.empty(), Bar.random(random));
     animation.forward();
   }
 
@@ -38,10 +38,7 @@ class ChartPageState extends State<ChartPage> with TickerProviderStateMixin {
 
   void changeData() {
     setState(() {
-      tween = BarTween(
-        tween.evaluate(animation),
-        Bar(random.nextDouble() * 100.0),
-      );
+      tween = BarTween(tween.evaluate(animation), Bar.random(random));
       animation.forward(from: 0.0);
     });
   }

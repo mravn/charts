@@ -1,15 +1,31 @@
+import 'dart:math';
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/animation.dart';
 import 'package:flutter/material.dart';
 
+import 'color_palette.dart';
+
 class Bar {
-  Bar(this.height);
+  Bar(this.height, this.color);
+
+  factory Bar.empty() => Bar(0.0, Colors.transparent);
+
+  factory Bar.random(Random random) {
+    return Bar(
+      random.nextDouble() * 100.0,
+      ColorPalette.primary.random(random),
+    );
+  }
 
   final double height;
+  final Color color;
 
   static Bar lerp(Bar begin, Bar end, double t) {
-    return Bar(lerpDouble(begin.height, end.height, t));
+    return Bar(
+      lerpDouble(begin.height, end.height, t),
+      Color.lerp(begin.color, end.color, t),
+    );
   }
 }
 
@@ -33,7 +49,7 @@ class BarChartPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final bar = animation.value;
     final paint = Paint()
-      ..color = Colors.blue[400]
+      ..color = bar.color
       ..style = PaintingStyle.fill;
     canvas.drawRect(
       Rect.fromLTWH(

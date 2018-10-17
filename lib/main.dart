@@ -17,7 +17,7 @@ class ChartPage extends StatefulWidget {
 class ChartPageState extends State<ChartPage> with TickerProviderStateMixin {
   final random = Random();
   AnimationController animation;
-  BarTween tween;
+  BarChartTween tween;
 
   @override
   void initState() {
@@ -26,7 +26,10 @@ class ChartPageState extends State<ChartPage> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    tween = BarTween(Bar.empty(), Bar.random(random));
+    tween = BarChartTween(
+      BarChart.empty(),
+      BarChart.random(random),
+    );
     animation.forward();
   }
 
@@ -38,7 +41,10 @@ class ChartPageState extends State<ChartPage> with TickerProviderStateMixin {
 
   void changeData() {
     setState(() {
-      tween = BarTween(tween.evaluate(animation), Bar.random(random));
+      tween = BarChartTween(
+        tween.evaluate(animation),
+        BarChart.random(random),
+      );
       animation.forward(from: 0.0);
     });
   }

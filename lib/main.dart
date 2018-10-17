@@ -1,5 +1,7 @@
 import 'dart:math';
+import 'dart:ui' show lerpDouble;
 
+import 'package:flutter/animation.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -11,13 +13,47 @@ class ChartPage extends StatefulWidget {
   ChartPageState createState() => ChartPageState();
 }
 
-class ChartPageState extends State<ChartPage> {
+class ChartPageState extends State<ChartPage> with TickerProviderStateMixin {
   final random = Random();
   int dataSet = 50;
+  AnimationController animation;
+  double startHeight;   // Strike one.
+  double currentHeight; // Strike two.
+  double endHeight;     // Strike three. Refactor.
+
+  @override
+  void initState() {
+    super.initState();
+    animation = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    )..addListener(() {
+        setState(() {
+          currentHeight = lerpDouble( // Strike one.
+            startHeight,
+            endHeight,
+            animation.value,
+          );
+        });
+      });
+    startHeight = 0.0;                // Strike two.
+    currentHeight = 0.0;
+    endHeight = dataSet.toDouble();
+    animation.forward();
+  }
+
+  @override
+  void dispose() {
+    animation.dispose();
+    super.dispose();
+  }
 
   void changeData() {
     setState(() {
+      startHeight = currentHeight;    // Strike three. Refactor.
       dataSet = random.nextInt(100);
+      endHeight = dataSet.toDouble();
+      animation.forward(from: 0.0);
     });
   }
 
@@ -27,7 +63,7 @@ class ChartPageState extends State<ChartPage> {
       body: Center(
         child: CustomPaint(
           size: Size(200.0, 100.0),
-          painter: BarChartPainter(dataSet.toDouble()),
+          painter: BarChartPainter(currentHeight),
         ),
       ),
       floatingActionButton: FloatingActionButton(

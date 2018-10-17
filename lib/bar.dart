@@ -8,36 +8,51 @@ import 'color_palette.dart';
 import 'tween.dart';
 
 class BarChart {
-  BarChart(this.bars);
+  BarChart(this.groups);
 
   factory BarChart.empty(Size size) {
-    return BarChart(<Bar>[]);
+    return BarChart(<BarGroup>[]);
   }
 
   factory BarChart.random(Size size, Random random) {
-    const barWidthFraction = 0.75;
-    final ranks = selectRanks(random, ColorPalette.primary.length);
-    final barCount = ranks.length;
-    final barDistance = size.width / (1 + barCount);
+    const groupWidthFraction = 0.75;
+    const barWidthFraction = 0.9;
+    final groupRanks = _selectRanks(random, 5);
+    final groupCount = groupRanks.length;
+    final groupDistance = size.width / (1 + groupCount);
+    final groupWidth = groupDistance * groupWidthFraction;
+    final startX = groupDistance - groupWidth / 2;
+    final barRanks = _selectRanks(random, ColorPalette.primary.length ~/ 2);
+    final barCount = barRanks.length;
+    final barDistance = groupWidth / barCount;
     final barWidth = barDistance * barWidthFraction;
-    final startX = barDistance - barWidth / 2;
-    final bars = List.generate(
-        barCount,
-        (i) => Bar(
-              ranks[i],
-              startX + i * barDistance,
-              barWidth,
-              random.nextDouble() * size.height,
-              ColorPalette.primary[ranks[i]],
-            ));
-    return BarChart(bars);
+    final groups = List.generate(
+      groupCount,
+      (i) {
+        final bars = List.generate(
+          barCount,
+          (j) => Bar(
+                barRanks[j],
+                startX + i * groupDistance + j * barDistance,
+                barWidth,
+                random.nextDouble() * size.height,
+                ColorPalette.primary[barRanks[j]],
+              ),
+        );
+        return BarGroup(
+          groupRanks[i],
+          bars,
+        );
+      },
+    );
+    return BarChart(groups);
   }
 
-  static List<int> selectRanks(Random random, int cap) {
+  static List<int> _selectRanks(Random random, int cap) {
     final ranks = <int>[];
     var rank = 0;
     while (true) {
-      if (random.nextDouble() < 0.2) rank++;
+      rank += random.nextInt(2);
       if (cap <= rank) break;
       ranks.add(rank);
       rank++;
@@ -45,21 +60,50 @@ class BarChart {
     return ranks;
   }
 
-  final List<Bar> bars;
+  final List<BarGroup> groups;
 }
 
 class BarChartTween extends Tween<BarChart> {
-  final MergeTween<Bar> _barsTween;
-
   BarChartTween(BarChart begin, BarChart end)
-      : _barsTween = MergeTween<Bar>(begin.bars, end.bars),
+      : _groupsTween = MergeTween<BarGroup>(begin.groups, end.groups),
         super(begin: begin, end: end);
 
+  final MergeTween<BarGroup> _groupsTween;
+
   @override
-  BarChart lerp(double t) => BarChart(_barsTween.lerp(t));
+  BarChart lerp(double t) => BarChart(_groupsTween.lerp(t));
 }
 
-class Bar implements MergeTweenable<Bar> {
+class BarGroup implements MergeTweenable<BarGroup> {
+  BarGroup(this.rank, this.bars);
+
+  final int rank;
+  final List<Bar> bars;
+
+  @override
+  BarGroup get empty => BarGroup(rank, <Bar>[]);
+
+  @override
+  bool operator <(BarGroup other) => rank < other.rank;
+
+  @override
+  Tween<BarGroup> tweenTo(BarGroup other) => BarGroupTween(this, other);
+}
+
+class BarGroupTween extends Tween<BarGroup> {
+  BarGroupTween(BarGroup begin, BarGroup end)
+      : _barsTween = MergeTween<Bar>(begin.bars, end.bars),
+        super(begin: begin, end: end) {
+    assert(begin.rank == end.rank);
+  }
+
+  final MergeTween<Bar> _barsTween;
+
+  @override
+  BarGroup lerp(double t) => BarGroup(begin.rank, _barsTween.lerp(t));
+}
+
+class Bar extends MergeTweenable<Bar> {
   Bar(this.rank, this.x, this.width, this.height, this.color);
 
   final int rank;
@@ -109,17 +153,19 @@ class BarChartPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..style = PaintingStyle.fill;
     final chart = animation.value;
-    for (final bar in chart.bars) {
-      paint.color = bar.color;
-      canvas.drawRect(
-        Rect.fromLTWH(
-          bar.x,
-          size.height - bar.height,
-          bar.width,
-          bar.height,
-        ),
-        paint,
-      );
+    for (final group in chart.groups) {
+      for (final bar in group.bars) {
+        paint.color = bar.color;
+        canvas.drawRect(
+          Rect.fromLTWH(
+            bar.x,
+            size.height - bar.height,
+            bar.width,
+            bar.height,
+          ),
+          paint,
+        );
+      }
     }
   }
 

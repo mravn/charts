@@ -45,35 +45,38 @@ class BarChart {
   }
 
   final List<Bar> bars;
+}
 
-  static BarChart lerp(BarChart begin, BarChart end, double t) {
-    final bars = <Bar>[];
+class BarChartTween extends Tween<BarChart> {
+  BarChartTween(BarChart begin, BarChart end) : super(begin: begin, end: end) {
     final bMax = begin.bars.length;
     final eMax = end.bars.length;
     var b = 0;
     var e = 0;
     while (b + e < bMax + eMax) {
       if (b < bMax && (e == eMax || begin.bars[b] < end.bars[e])) {
-        bars.add(Bar.lerp(begin.bars[b], begin.bars[b].collapsed, t));
+        _tweens.add(BarTween(begin.bars[b], begin.bars[b].collapsed));
         b++;
       } else if (e < eMax && (b == bMax || end.bars[e] < begin.bars[b])) {
-        bars.add(Bar.lerp(end.bars[e].collapsed, end.bars[e], t));
+        _tweens.add(BarTween(end.bars[e].collapsed, end.bars[e]));
         e++;
       } else {
-        bars.add(Bar.lerp(begin.bars[b], end.bars[e], t));
+        _tweens.add(BarTween(begin.bars[b], end.bars[e]));
         b++;
         e++;
       }
     }
-    return BarChart(bars);
   }
-}
 
-class BarChartTween extends Tween<BarChart> {
-  BarChartTween(BarChart begin, BarChart end) : super(begin: begin, end: end);
+  final _tweens = <BarTween>[];
 
   @override
-  BarChart lerp(double t) => BarChart.lerp(begin, end, t);
+  BarChart lerp(double t) => BarChart(
+        List.generate(
+          _tweens.length,
+          (i) => _tweens[i].lerp(t),
+        ),
+      );
 }
 
 class Bar {
